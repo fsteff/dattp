@@ -7,6 +7,7 @@ const HashMap = require('hashmap')
 const url = require('url')
 
 const hostname = 'localhost'
+const protocol = 'http://'
 const www = './www/'
 const tmp = 'D:/tmp/'
 const port = 80
@@ -15,7 +16,7 @@ var mainapp = connect()
 mainapp.use(serveStatic(www))
 
 const drive = new DattpDrive(tmp)
-const webserver = new DattpServer(drive)
+const webserver = new DattpServer(drive, hostname, protocol)
 
 var datapp = connect()
 

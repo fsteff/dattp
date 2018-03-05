@@ -73,31 +73,40 @@
     $(document).ready(function () {
       var page = findGetParameter('page')
 
-      var ifr = document.createElement('iframe')
+      const ifr = document.createElement('iframe')
 
       function onLoad() {
         this.style.display = 'block';
         $('#loading-dat').remove()
+        //ifr.onload = onChange
+        //ifr.contentWindow.addEventListener('unload', onChange)
+      }
+
+      function onChange(evt){
+        console.log('change' + evt)
       }
       document.body.appendChild(ifr)
-      ifr.src = location.protocol + '//' + token + '.' + location.host + getPath(page)
+      ifr.src = location.protocol + '//' + token + '.' + location.host + getPath(page) + '?cors=true'
       ifr.style.display = 'none'
       ifr.id = 'iframe-dat'
       ifr.onload = onLoad
 
-      /*$.get('/dat/view?page=' + page + '&token='+token)
-      .done(function(data){
-        var elem = null
-        try{
-          elem = $(data).find('html')
-          elem.find('head').prependTo($('head'))
-          elem.find('body').prependTo($('body'))
-        }catch(err){
-          console.log(err)
+      window.addEventListener('message', (evt) => {
+        if(evt.origin !== location.protocol + '//' + token + '.' + location.host) return
+
+        var msg = evt.data
+        if(typeof msg.location === 'string'){
+          if(getHost(msg.location).endsWith(location.host)){
+            ifr.src = msg.location + '?cors=true'
+          }else if(msg.location.startsWith('dat://')){
+            window.location = location.protocol + '//' + location.host + '/dat?page=' + msg.location
+          }else{
+            window.location = msg.location
+          }
         }
-      }).fail(function(){
-        console.log('error')
-      })*/
+
+      })
+      
 
       //navigator.serviceWorker.register('/js/service-worker.js')
       //navigator.serviceWorker.ready.then(reload);
