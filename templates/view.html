@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>title</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <script>
+    {{token}}
+
+    function findGetParameter(parameterName) {
+      var result = null,
+        tmp = [];
+      var items = location.search.substr(1).split("&");
+      for (var index = 0; index < items.length; index++) {
+        tmp = items[index].split("=");
+        if (tmp[0] === parameterName) result = decodeURIComponent(tmp[1]);
+      }
+      return result;
+    }
+
+    function isAllowedChar(str) {
+      var code, i, len
+      for (i = 0, len = str.length; i < len; i++) {
+        code = str.charCodeAt(i)
+        if (!(code > 47 && code < 58) && // numeric (0-9)
+          !(code > 64 && code < 91) && // upper alpha (A-Z)
+          !(code > 96 && code < 123) &&
+          ! (code >= 45 && code <= 46)) { // lower alpha (a-z)
+          return false
+        }
+      }
+      return true
+    }
+
+    function getHost(url) {
+
+      var a = document.createElement('a')
+      a.href = url
+      return a.protocol + "//" + a.host
+
+    }
+
+    function getPath(url) {
+      if (url.startsWith('dat://')) {
+        url = url.substr(6)
+        for (var i = 0; i < url.length; i++) {
+          var c = url.charAt(i)
+          if (c == '/') {
+            return url.substr(i)
+          }
+          if (!isAllowedChar(c)) {
+            console.error('invalid dat url: ' + url)
+          }
+        }
+        return '/'
+      } else {
+        var a = document.createElement('a')
+        a.href = url
+        return a.pathname
+      }
+    }
+
+    function isHtml(path) {
+      if (path.endsWith('/')) path = path.substr(0, path.length - 1)
+
+      var el = document.createElement('a')
+      el.href = path
+      return el.pathname.endsWith('.html') || el.pathname.endsWith('.htm')
+    }
+
+    $(document).ready(function () {
+      var page = findGetParameter('page')
+
+      var ifr = document.createElement('iframe')
+
+      function onLoad() {
+        this.style.display = 'block';
+        $('#loading-dat').remove()
+      }
+      document.body.appendChild(ifr)
+      ifr.src = location.protocol + '//' + token + '.' + location.host + getPath(page)
+      ifr.style.display = 'none'
+      ifr.id = 'iframe-dat'
+      ifr.onload = onLoad
+
+      /*$.get('/dat/view?page=' + page + '&token='+token)
+      .done(function(data){
+        var elem = null
+        try{
+          elem = $(data).find('html')
+          elem.find('head').prependTo($('head'))
+          elem.find('body').prependTo($('body'))
+        }catch(err){
+          console.log(err)
+        }
+      }).fail(function(){
+        console.log('error')
+      })*/
+
+      //navigator.serviceWorker.register('/js/service-worker.js')
+      //navigator.serviceWorker.ready.then(reload);
+    })
+  </script>
+</head>
+
+<body>
+  <div id="loading-dat">
+    <div class="lds-ripple">
+      <div></div>
+      <div></div>
+    </div>
+    <div class="loading-dat">Loading Dat...</div>
+  </div>
+  <footer>
+    DaTTP - The Dat-HTTP Gateway
+  </footer>
+</body>
+
+</html>
