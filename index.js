@@ -23,7 +23,6 @@ var datapp = connect()
 
 const datmap = new HashMap()
 const aliasmap = new HashMap()
-// const datready = new HashMap()
 
 mainapp.use('/dat', (req, res, next) => {
   const parsed = url.parse(req.url, true)
