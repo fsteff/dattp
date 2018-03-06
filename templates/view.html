@@ -4,11 +4,18 @@
 <head>
   <meta charset="utf-8">
   <title>title</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <!-- <link rel="stylesheet" href="/css/style.css"> -->
+  <style>   
+    html, body{ width: 100%; height: 100%; padding: 0; margin: 0; } iframe{ border: none; width: 100%; height: 100%; } footer{
+    padding: 5px; width: calc(100% - 10px); height: 40px; position: fixed; left: 0px; bottom: 0px; background-color: #ccc; text-align:
+    right; color: #000; font-size: 30px; font-family: Arial, Helvetica, sans-serif; opacity: 0.3; } .lds-ripple { display: inline-block;
+    position: relative; width: 64px; height: 64px; } .lds-ripple div { position: absolute; border: 4px solid #ccc; opacity: 1;
+    border-radius: 50%; animation: lds-ripple 1s cubic-bezier(0, 0.2, 0.8, 1) infinite; } .lds-ripple div:nth-child(2) { animation-delay:
+    -0.5s; } @keyframes lds-ripple { 0% { top: 28px; left: 28px; width: 0; height: 0; opacity: 1; } 100% { top: -1px; left: -1px;
+    width: 58px; height: 58px; opacity: 0; } }
+  </style>
   <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
   <script>
-    {{token}}
-
     function findGetParameter(parameterName) {
       var result = null,
         tmp = [];
@@ -38,7 +45,7 @@
 
       var a = document.createElement('a')
       a.href = url
-      return a.protocol + "//" + a.host
+      return a.host
 
     }
 
@@ -70,6 +77,22 @@
       return el.pathname.endsWith('.html') || el.pathname.endsWith('.htm')
     }
 
+    function replaceClickHandlers(ifr){
+      for (var ls = ifr.contentWindow.document.links, numLinks = ls.length, i=0; i<numLinks; i++){
+          const href = ls[i].href
+          ls[i].onclick = () => {
+              if(href.startsWith('dat://')){
+                window.location = location.protocol + '//' + location.host + '/dat?page=' + href
+              }else if(getHost(href) === location.host){
+                ifr.src = href
+              }else{
+                window.location = href
+              }
+              return false
+          } 
+      }
+    }
+
     $(document).ready(function () {
       var page = findGetParameter('page')
 
@@ -80,24 +103,26 @@
         $('#loading-dat').remove()
         //ifr.onload = onChange
         //ifr.contentWindow.addEventListener('unload', onChange)
+        replaceClickHandlers(this)
       }
 
       function onChange(evt){
         console.log('change' + evt)
       }
       document.body.appendChild(ifr)
-      ifr.src = location.protocol + '//' + token + '.' + location.host + getPath(page) + '?cors=true'
+      ifr.src = location.protocol + '//' + location.host + getPath(page) //+ '?cors=true'
       ifr.style.display = 'none'
       ifr.id = 'iframe-dat'
       ifr.onload = onLoad
 
+      /*
       window.addEventListener('message', (evt) => {
-        if(evt.origin !== location.protocol + '//' + token + '.' + location.host) return
+        if(evt.origin !== location.protocol + '//' + location.host) return
 
         var msg = evt.data
         if(typeof msg.location === 'string'){
           if(getHost(msg.location).endsWith(location.host)){
-            ifr.src = msg.location + '?cors=true'
+            ifr.src = msg.location //+ '?cors=true'
           }else if(msg.location.startsWith('dat://')){
             window.location = location.protocol + '//' + location.host + '/dat?page=' + msg.location
           }else{
@@ -106,7 +131,8 @@
         }
 
       })
-      
+      */
+    
 
       //navigator.serviceWorker.register('/js/service-worker.js')
       //navigator.serviceWorker.ready.then(reload);

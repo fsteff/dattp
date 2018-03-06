@@ -1,10 +1,11 @@
-var connect = require('connect')
-var serveStatic = require('serve-static')
-var vhost = require('vhost')
+const connect = require('connect')
+const serveStatic = require('serve-static')
+const vhost = require('vhost')
 const DattpServer = require('./lib/dttp-webserver')
 const DattpDrive = require('./lib/dttp-drive')
 const HashMap = require('hashmap')
 const url = require('url')
+const datDns = require('dat-dns')()
 
 const hostname = 'localhost'
 const protocol = 'http://'
@@ -21,33 +22,56 @@ const webserver = new DattpServer(drive, hostname, protocol)
 var datapp = connect()
 
 const datmap = new HashMap()
+const aliasmap = new HashMap()
 // const datready = new HashMap()
 
 mainapp.use('/dat', (req, res, next) => {
   const parsed = url.parse(req.url, true)
   const path = (parsed.query) ? parsed.query.page : null
   if (path) {
-    console.log('request for ' + path)
-    const alias = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(36)
-    datmap.set(alias, [])
-    drive.loadDat(path, (dat) => {
-      var cbs = datmap.get(alias)
-      datmap.set(alias, dat)
-      cbs.forEach(cb => cb())
+    datDns.resolveName(path, (err, daturl) => {
+      if(err){
+        redirect(res, '/404.html')
+        return
+      }
+      var alias = null
+      if (aliasmap.has(daturl)) {
+        // dat already loaded
+        alias = aliasmap.get(daturl)
+      } else {
+        // dat is new
+        alias = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(36)
+        datmap.set(alias, [])
+        aliasmap.set(daturl, alias)
+        drive.loadDat(daturl, (dat) => {
+          var cbs = datmap.get(alias)
+          datmap.set(alias, dat)
+          cbs.forEach(cb => cb())
+        })
+      }
 
-      console.log('dat://' + dat.key.toString('hex') + ' is available under http://' + alias + '.localhost/')
+      redirect(res, protocol + '//' + alias + '.' + hostname + '/dat?page=dat://' + daturl)
     })
-
-    webserver.sendTemplate(alias, res)
+  } else {
+    redirect(res, '/404.html')
   }
 })
 
 datapp.use(function (req, res, next) {
   const alias = req.vhost[0]
 
+  if (req.url.startsWith('/dat?')) {
+    if (!datmap.has(alias)) {
+      redirect(res, protocol + '//' + hostname + req.url)
+      return
+    } else {
+      webserver.sendTemplate(alias, res)
+      return
+    }
+  }
+
   if (!datmap.has(alias)) {
     res.writeHead(404, 'alias not found')
-    // res.redirect('/404.html')
     res.end()
     return
   }
@@ -77,3 +101,10 @@ app.use(vhost('www.' + hostname, mainapp))
 
 app.use(vhost('*.' + hostname, datapp))
 app.listen(port, () => console.log('webserver running on port ' + port))
+
+function redirect (res, page) {
+  res.writeHead(302, {
+    'Location': page
+  })
+  res.end()
+}
